@@ -12,6 +12,7 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	"io"
 	"io/ioutil"
+	"math"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -202,6 +203,11 @@ type BinanceUserUsecase struct {
 // NewBinanceDataUsecase new a BinanceData usecase.
 func NewBinanceDataUsecase(binanceUserRepo BinanceUserRepo, tx Transaction, logger log.Logger) *BinanceUserUsecase {
 	return &BinanceUserUsecase{binanceUserRepo: binanceUserRepo, tx: tx, log: log.NewHelper(logger)}
+}
+
+func isZero(x float64) bool {
+	const epsilon = 1e-9 // 定义一个足够小的阈值
+	return math.Abs(x) < epsilon
 }
 
 func (b *BinanceUserUsecase) SetUserBalanceAndUser(ctx context.Context, address string, balance string, cost uint64, open bool, playType uint64) error {
@@ -1051,7 +1057,7 @@ func (b *BinanceUserUsecase) ReBindTrader(ctx context.Context) error {
 							}
 
 							// 当前代币的多单还剩多少, 有的记录
-							if 0 < historyQuantityFloatMore {
+							if !isZero(historyQuantityFloatMore) && 0 < historyQuantityFloatMore {
 								userBindAfterUnbind = append(userBindAfterUnbind, &UserBindAfterUnbind{
 									UserId:       vUpdateBindTrader.UserId,
 									TraderId:     vUpdateBindTrader.TraderId,
@@ -1063,7 +1069,7 @@ func (b *BinanceUserUsecase) ReBindTrader(ctx context.Context) error {
 							}
 
 							// 当前代币的空单还剩多少, 有的记录
-							if 0 < historyQuantityFloatEmpty {
+							if !isZero(historyQuantityFloatEmpty) && 0 < historyQuantityFloatEmpty {
 								userBindAfterUnbind = append(userBindAfterUnbind, &UserBindAfterUnbind{
 									UserId:       vUpdateBindTrader.UserId,
 									TraderId:     vUpdateBindTrader.TraderId,
@@ -1244,7 +1250,7 @@ func (b *BinanceUserUsecase) ChangeBindTrader(ctx context.Context) error {
 						}
 
 						// 当前代币的多单还剩多少, 有的记录
-						if 0 < historyQuantityFloatMore {
+						if !isZero(historyQuantityFloatMore) && 0 < historyQuantityFloatMore {
 							userBindAfterUnbind = append(userBindAfterUnbind, &UserBindAfterUnbind{
 								UserId:       vVUserBindTrader.UserId,
 								TraderId:     vVUserBindTrader.TraderId,
@@ -1256,7 +1262,7 @@ func (b *BinanceUserUsecase) ChangeBindTrader(ctx context.Context) error {
 						}
 
 						// 当前代币的空单还剩多少, 有的记录
-						if 0 < historyQuantityFloatEmpty {
+						if !isZero(historyQuantityFloatEmpty) && 0 < historyQuantityFloatEmpty {
 							userBindAfterUnbind = append(userBindAfterUnbind, &UserBindAfterUnbind{
 								UserId:       vVUserBindTrader.UserId,
 								TraderId:     vVUserBindTrader.TraderId,
