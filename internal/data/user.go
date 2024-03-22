@@ -430,7 +430,7 @@ func (b *BinanceUserRepo) UpdatesUserBindTraderStatusAndInitOrderById(ctx contex
 		now = time.Now()
 	)
 
-	if err = b.data.DB(ctx).Table("new_user_bind_trader").Where("id=?", id).
+	if err = b.data.DB(ctx).Table("new_user_bind_trader_two").Where("id=?", id).
 		Updates(map[string]interface{}{"status": status, "init_order": initOrder, "updated_at": now}).Error; nil != err {
 		return false, errors.NotFound("UPDATE_USER_BIND_TRADER_ERROR", "UPDATE_USER_BIND_TRADER_ERROR")
 	}

@@ -875,7 +875,6 @@ func (b *BinanceUserUsecase) ReBindTrader(ctx context.Context) error {
 		}
 
 		// 需要新增
-		fmt.Println(bindCost, tmpCost)
 		if bindCost < tmpCost {
 			tmpCost -= bindCost
 
@@ -909,10 +908,7 @@ func (b *BinanceUserUsecase) ReBindTrader(ctx context.Context) error {
 					bindTrader[vTraders.ID] = vTraders
 					tmpCost -= vTraders.Amount
 				}
-				fmt.Println(tmpCost*30/100 >= vTraders.Amount, 1111)
 			}
-
-			fmt.Println(tmpCost)
 
 			// 第二轮，跳过分配限制的额度，剩下的按顺序分配
 			for _, vTraders := range traders {
@@ -938,7 +934,6 @@ func (b *BinanceUserUsecase) ReBindTrader(ctx context.Context) error {
 				tmpCost -= vTraders.Amount
 			}
 
-			fmt.Println(tmpCost)
 			// 上述待绑定交易员结果集
 			if 0 >= len(bindTrader) {
 				continue
