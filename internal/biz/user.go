@@ -150,7 +150,7 @@ type BinanceUserRepo interface {
 	InsertUserBindTrader(ctx context.Context, userId uint64, traderId uint64, amount uint64) (*UserBindTrader, error)
 	UpdatesUserBindTraderStatus(ctx context.Context, userId uint64, status uint64) (bool, error)
 	UpdatesUserBindTraderStatusById(ctx context.Context, id uint64, status uint64) (bool, error)
-	UpdatesUserBindTraderStatusAndInitOrderById(ctx context.Context, id uint64, status uint64, initOrder uint64) (bool, error)
+	UpdatesUserBindTraderStatusAndInitOrderById(ctx context.Context, id uint64, status uint64, initOrder uint64, amount uint64) (bool, error)
 	UpdatesUserBindTraderStatusAndAmountById(ctx context.Context, id uint64, status uint64, amount uint64) (bool, error)
 	DeleteUserBindTrader(ctx context.Context, userId uint64) (bool, error)
 	InsertUserOrder(ctx context.Context, order *UserOrder) (*UserOrder, error)
@@ -662,6 +662,7 @@ func (b *BinanceUserUsecase) UserBindTrader(ctx context.Context, users []*User) 
 			continue
 		}
 
+		num := 0
 		// 新增 和 更新
 		insertUserBindTrader := make([]*UserBindTrader, 0)
 		for k, v := range bindTrader {
@@ -670,6 +671,8 @@ func (b *BinanceUserUsecase) UserBindTrader(ctx context.Context, users []*User) 
 				TraderId: k,
 				Amount:   v.Amount,
 			})
+
+			num++
 		}
 
 		// 写入
@@ -814,6 +817,7 @@ func (b *BinanceUserUsecase) ReBindTrader(ctx context.Context) error {
 			}
 
 			// 新增 和 更新
+			num := 0
 			insertUserBindTrader := make([]*UserBindTrader, 0)
 			for k, v := range bindTrader {
 				insertUserBindTrader = append(insertUserBindTrader, &UserBindTrader{
@@ -821,6 +825,8 @@ func (b *BinanceUserUsecase) ReBindTrader(ctx context.Context) error {
 					TraderId: k,
 					Amount:   v.Amount,
 				})
+
+				num++
 			}
 
 			// 写入
@@ -852,7 +858,7 @@ func (b *BinanceUserUsecase) ReBindTrader(ctx context.Context) error {
 		)
 
 		alreadyBindTrader := make(map[uint64]uint64, 0)
-		selfUpdateBindTrader := make(map[uint64]uint64, 0)
+		selfUpdateBindTrader := make(map[uint64]*UserBindTrader, 0)
 		for _, vUserBindTraderMap := range userBindTraderMap[vUsers.ID] {
 			if 0 == vUserBindTraderMap.Status {
 				bindCost += vUserBindTraderMap.Amount
@@ -861,7 +867,7 @@ func (b *BinanceUserUsecase) ReBindTrader(ctx context.Context) error {
 
 			// 因为额度调整换绑的不算
 			if 3 == vUserBindTraderMap.Status {
-				selfUpdateBindTrader[vUserBindTraderMap.TraderId] = vUserBindTraderMap.ID
+				selfUpdateBindTrader[vUserBindTraderMap.TraderId] = vUserBindTraderMap
 				continue
 			}
 
@@ -869,6 +875,7 @@ func (b *BinanceUserUsecase) ReBindTrader(ctx context.Context) error {
 		}
 
 		// 需要新增
+		fmt.Println(bindCost, tmpCost)
 		if bindCost < tmpCost {
 			tmpCost -= bindCost
 
@@ -902,7 +909,10 @@ func (b *BinanceUserUsecase) ReBindTrader(ctx context.Context) error {
 					bindTrader[vTraders.ID] = vTraders
 					tmpCost -= vTraders.Amount
 				}
+				fmt.Println(tmpCost, vTraders.Amount, tmpCost*30/100 >= vTraders.Amount, 1111)
 			}
+
+			fmt.Println(tmpCost)
 
 			// 第二轮，跳过分配限制的额度，剩下的按顺序分配
 			for _, vTraders := range traders {
@@ -928,6 +938,7 @@ func (b *BinanceUserUsecase) ReBindTrader(ctx context.Context) error {
 				tmpCost -= vTraders.Amount
 			}
 
+			fmt.Println(tmpCost)
 			// 上述待绑定交易员结果集
 			if 0 >= len(bindTrader) {
 				continue
@@ -952,7 +963,7 @@ func (b *BinanceUserUsecase) ReBindTrader(ctx context.Context) error {
 				for _, vInsertUserBindTrader := range insertUserBindTrader {
 					// 存在的写入，不存在更新
 					if _, ok := selfUpdateBindTrader[vInsertUserBindTrader.TraderId]; ok {
-						_, err = b.binanceUserRepo.UpdatesUserBindTraderStatusAndInitOrderById(ctx, selfUpdateBindTrader[vInsertUserBindTrader.TraderId], 0, 0)
+						_, err = b.binanceUserRepo.UpdatesUserBindTraderStatusAndInitOrderById(ctx, selfUpdateBindTrader[vInsertUserBindTrader.TraderId].ID, 0, 0, selfUpdateBindTrader[vInsertUserBindTrader.TraderId].Amount)
 					} else {
 						_, err = b.binanceUserRepo.InsertUserBindTrader(ctx, vInsertUserBindTrader.UserId, vInsertUserBindTrader.TraderId, vInsertUserBindTrader.Amount)
 					}
@@ -1257,7 +1268,7 @@ func (b *BinanceUserUsecase) ChangeBindTrader(ctx context.Context) error {
 
 				// 存在则更新
 				if _, ok := selfUpdateBindTrader[insertTrader.ID]; ok {
-					_, err = b.binanceUserRepo.UpdatesUserBindTraderStatusAndInitOrderById(ctx, selfUpdateBindTrader[insertTrader.ID], 0, 0)
+					_, err = b.binanceUserRepo.UpdatesUserBindTraderStatusAndInitOrderById(ctx, selfUpdateBindTrader[insertTrader.ID], 0, 0, insertTrader.Amount)
 				} else {
 					_, err = b.binanceUserRepo.InsertUserBindTrader(ctx, vVUserBindTrader.UserId, insertTrader.ID, vVUserBindTrader.Amount)
 				}
